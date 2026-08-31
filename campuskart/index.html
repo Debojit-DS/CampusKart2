@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#13111C" />
+  <meta name="description" content="CampusKart — A campus-only, peer-to-peer marketplace where students buy, sell, and trade items." />
+  <title>CampusKart — Your College Marketplace</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+  <!-- Core Design System CSS -->
+  <link rel="stylesheet" href="./src/styles/main.css" />
+
+  <style>
+    /* Responsive Helpers */
+    @media (max-width: 768px) {
+      .hidden-mobile { display: none !important; }
+      .hidden-desktop { display: flex !important; }
+      .hidden-mobile-pane { display: none !important; }
+      .lg-grid-2 { grid-template-columns: 1fr !important; }
+      .lg-grid-12 > div { grid-column: span 12 !important; }
+    }
+
+    @media (min-width: 769px) {
+      .hidden-desktop { display: none !important; }
+      .hidden-desktop-pane { display: none !important; }
+      .lg-grid-2 { grid-template-columns: 1fr 1fr !important; }
+      .lg-grid-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+    }
+
+    /* Keyframe Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scaleUp {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+
+  <!-- Prevent Theme Flicker -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('campuskart_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+</head>
+<body>
+  <div id="app" style="min-height: 100vh; display: flex; flex-direction: column;"></div>
+
+  <!-- App Bootstrap -->
+  <script type="module">
+    import { initApp } from './src/app.js';
+    import { apiService } from './src/api/apiService.js';
+    import { socketService } from './src/services/socket.js';
+    import { store } from './src/data/store.js';
+
+    const appElement = document.getElementById('app');
+
+    function showError(message) {
+      console.error('[Bootstrap]', message);
+      appElement.innerHTML = `
+        <div style="text-align: center; padding: 80px 20px; color: var(--on-surface);">
+          <h1 style="font-size: 24px; margin-bottom: 12px;">Something went wrong</h1>
+          <p style="font-family: monospace; font-size: 13px; color: var(--error); margin-bottom: 24px; white-space: pre-wrap; word-break: break-word;">${message}</p>
+          <a href="#/" class="btn btn-primary">Reload</a>
+        </div>
+      `;
+    }
+
+    async function bootstrap() {
+      console.log('[Bootstrap] Starting...');
+      try {
+        const result = await apiService.refreshToken();
+        console.log('[Bootstrap] refreshToken result:', result);
+        if (result.accessToken) {
+          apiService.setAccessToken(result.accessToken);
+          localStorage.setItem('campuskart_is_auth', 'true');
+          try {
+            const user = await apiService.getMe();
+            localStorage.setItem('campuskart_current_user', JSON.stringify(user));
+          } catch (err) {
+            console.warn('[Bootstrap] getMe failed:', err.message);
+          }
+          store.notify('auth_change', { user: store.getCurrentUser(), isAuthenticated: true });
+          socketService.connect(result.accessToken);
+        }
+      } catch (err) {
+        console.warn('[Bootstrap] Session restore failed:', err.message);
+      }
+
+      try {
+        console.log('[Bootstrap] Initializing app...');
+        window.router = initApp(appElement);
+        console.log('[Bootstrap] App initialized successfully');
+      } catch (err) {
+        showError(err.message || 'Unknown initialization error');
+      }
+    }
+
+    bootstrap().catch(err => showError(err.message || 'Unknown bootstrap error'));
+  </script>
+</body>
+</html>
