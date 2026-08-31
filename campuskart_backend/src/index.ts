@@ -27,11 +27,20 @@ import { errorHandler } from './middleware/errorHandler.js';
 export const prisma = new PrismaClient();
 
 const app = express();
+
+// Trust proxy for accurate IP tracking behind Render's reverse proxy
+app.set('trust proxy', 1);
+
 const httpServer = createServer(app);
+
+// Parse the frontend URLs from the environment variable
+const frontendOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(s => s.trim());
 
 const io = new SocketServer(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: frontendOrigins,
     credentials: true,
   },
 });
@@ -39,7 +48,6 @@ const io = new SocketServer(httpServer, {
 // Security middleware
 app.use(helmet());
 
-const frontendOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map(s => s.trim());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || frontendOrigins.includes(origin)) {
