@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://campuskart-g07o.onrender.com/api/$1"
+    }
+  ]
+}
