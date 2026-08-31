@@ -22,6 +22,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY prisma ./prisma
+RUN apt-get update -y && apt-get install -y openssl
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
