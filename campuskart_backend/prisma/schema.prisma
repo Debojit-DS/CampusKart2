@@ -1,0 +1,373 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 4.1 Institutions (campus tenant table)
+// ============================================================
+model Institution {
+  id           String   @id @default(uuid())
+  name         String
+  emailDomains String[]
+  departments  String[] @default([])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  users        User[]
+  pickupSpots  PickupSpot[]
+  listings     Listing[]
+
+  @@map("institutions")
+}
+
+// ============================================================
+// 4.2 Users
+// ============================================================
+model User {
+  id             String   @id @default(uuid())
+  fullName       String   @map("full_name")
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  avatarUrl      String?  @map("avatar_url")
+  isVerified     Boolean  @default(false) @map("is_verified")
+  campusId       String   @map("campus_id")
+  department     String?
+  yearOfStudy    Int?     @map("year_of_study")
+  joinedAt       DateTime @default(now()) @map("joined_at")
+  ratingAverage  Decimal  @default(0) @map("rating_average") @db.Decimal(2, 1)
+  ratingCount    Int      @default(0) @map("rating_count")
+  role           String   @default("student")
+  status         String   @default("active")
+  reportCount    Int      @default(0) @map("report_count")
+  fcmToken       String?  @map("fcm_token")
+  lastActiveAt   DateTime? @map("last_active_at")
+  tokenVersion   Int      @default(0) @map("token_version")
+
+  campus         Institution @relation(fields: [campusId], references: [id])
+  listings       Listing[]   @relation("SellerListings")
+  conversationsAsBuyer Conversation[] @relation("BuyerConversations")
+  conversationsAsSeller Conversation[] @relation("SellerConversations")
+  messages       Message[]
+  offers         Offer[]
+  conversationReads ConversationRead[]
+  notifications  Notification[]
+  bookmarks      Bookmark[]
+  wishlistItems  WishlistItem[]
+  ratingsGiven   Rating[] @relation("RaterRatings")
+  ratingsReceived Rating[] @relation("RateeRatings")
+  reports        Report[] @relation("ReporterReports")
+  reportedUserReports Report[] @relation("ReportedUserReports")
+  badges         UserBadge[]
+  moderationActions ModerationAction[]
+  listingViews   ListingView[]
+  resolvedReports Report[] @relation("ResolverReports")
+
+  @@index([campusId])
+  @@map("users")
+}
+
+// ============================================================
+// 4.3 Categories
+// ============================================================
+model Category {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  label     String
+  parentId  String?  @map("parent_id")
+
+  parent    Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryParent")
+  listingsAsTop Listing[] @relation("TopCategoryListings")
+  listingsAsSub Listing[] @relation("SubCategoryListings")
+  wishlistItems WishlistItem[]
+
+  @@map("categories")
+}
+
+// ============================================================
+// 4.4 Pickup Spots
+// ============================================================
+model PickupSpot {
+  id        String   @id @default(uuid())
+  campusId  String   @map("campus_id")
+  label     String
+  isActive  Boolean  @default(true) @map("is_active")
+
+  campus    Institution @relation(fields: [campusId], references: [id])
+  listings  Listing[]
+
+  @@map("pickup_spots")
+}
+
+// ============================================================
+// 4.5 Listings
+// ============================================================
+model Listing {
+  id             String   @id @default(uuid())
+  type           String   @default("item")
+  title          String
+  description    String
+  price          Decimal  @db.Decimal(10, 2)
+  currency       String   @default("INR")
+  isNegotiable   Boolean  @default(true) @map("is_negotiable")
+  condition      String?
+  categoryTopId  String?  @map("category_top_id")
+  categorySubId  String?  @map("category_sub_id")
+  pickupLocation String   @map("pickup_location")
+  pickupSpotId   String?  @map("pickup_spot_id")
+  sellerId       String   @map("seller_id")
+  campusId       String   @map("campus_id")
+  status         String   @default("active")
+  isUrgent       Boolean  @default(false) @map("is_urgent")
+  exchangeOnly   Boolean  @default(false) @map("exchange_only")
+  exchangeFor    String?  @map("exchange_for")
+  viewCount      Int      @default(0) @map("view_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  seller         User @relation("SellerListings", fields: [sellerId], references: [id])
+  campus        Institution @relation(fields: [campusId], references: [id])
+  categoryTop   Category? @relation("TopCategoryListings", fields: [categoryTopId], references: [id])
+  categorySub   Category? @relation("SubCategoryListings", fields: [categorySubId], references: [id])
+  pickupSpot    PickupSpot? @relation(fields: [pickupSpotId], references: [id])
+  images        ListingImage[]
+  conversations Conversation[]
+  offers        Offer[]
+  bookmarks     Bookmark[]
+  ratings       Rating[]
+  reports       Report[]
+  listingViews  ListingView[]
+
+  @@index([campusId, status])
+  @@index([categoryTopId])
+  @@index([sellerId])
+  @@map("listings")
+}
+
+// ============================================================
+// 4.6 Listing Images
+// ============================================================
+model ListingImage {
+  id           String   @id @default(uuid())
+  listingId    String   @map("listing_id")
+  url          String
+  altText      String?  @map("alt_text")
+  sortOrder    Int      @default(0) @map("sort_order")
+  qualityFlag  String?  @map("quality_flag")
+
+  listing      Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_images")
+}
+
+// ============================================================
+// 4.7 Conversations / Messages / Offers
+// ============================================================
+model Conversation {
+  id                 String   @id @default(uuid())
+  listingId          String   @map("listing_id")
+  buyerId            String   @map("buyer_id")
+  sellerId           String   @map("seller_id")
+  lastMessagePreview String?  @map("last_message_preview")
+  lastMessageAt      DateTime? @map("last_message_at")
+
+  listing            Listing @relation(fields: [listingId], references: [id])
+  buyer              User @relation("BuyerConversations", fields: [buyerId], references: [id])
+  seller             User @relation("SellerConversations", fields: [sellerId], references: [id])
+  messages           Message[]
+  offers             Offer[]
+  reads              ConversationRead[]
+
+  @@unique([listingId, buyerId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  type           String   @default("text")
+  text           String?
+  offerId        String?  @map("offer_id")
+  imageUrl       String?  @map("image_url")
+  locationLabel  String?  @map("location_label")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User @relation(fields: [senderId], references: [id])
+  offer          Offer? @relation(fields: [offerId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Offer {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  listingId      String   @map("listing_id")
+  proposedById   String   @map("proposed_by_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  currency       String   @default("INR")
+  status         String   @default("pending")
+  parentOfferId  String?  @map("parent_offer_id")
+  expiresAt      DateTime? @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  listing        Listing @relation(fields: [listingId], references: [id])
+  proposedBy     User @relation(fields: [proposedById], references: [id])
+  parentOffer    Offer? @relation("OfferChain", fields: [parentOfferId], references: [id])
+  childOffers    Offer[] @relation("OfferChain")
+  messages       Message[]
+
+  @@index([conversationId])
+  @@map("offers")
+}
+
+model ConversationRead {
+  conversationId String   @map("conversation_id")
+  userId         String   @map("user_id")
+  lastReadAt     DateTime @default(now()) @map("last_read_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id])
+
+  @@id([conversationId, userId])
+  @@map("conversation_reads")
+}
+
+// ============================================================
+// 4.8 Notifications
+// ============================================================
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  payload   Json     @default("{}")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ============================================================
+// 4.9 Supporting tables
+// ============================================================
+model Bookmark {
+  userId     String   @map("user_id")
+  listingId  String   @map("listing_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User @relation(fields: [userId], references: [id])
+  listing    Listing @relation(fields: [listingId], references: [id])
+
+  @@id([userId, listingId])
+  @@map("bookmarks")
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  keyword    String
+  categoryId String?  @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User @relation(fields: [userId], references: [id])
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("wishlist_items")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  listingId String   @map("listing_id")
+  raterId   String   @map("rater_id")
+  rateeId   String   @map("ratee_id")
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing   Listing @relation(fields: [listingId], references: [id])
+  rater     User @relation("RaterRatings", fields: [raterId], references: [id])
+  ratee     User @relation("RateeRatings", fields: [rateeId], references: [id])
+
+  @@unique([listingId, raterId])
+  @@map("ratings")
+}
+
+model Report {
+  id              String   @id @default(uuid())
+  reporterId      String   @map("reporter_id")
+  listingId       String?  @map("listing_id")
+  reportedUserId  String?  @map("reported_user_id")
+  reason          String
+  details         String?
+  status          String   @default("open")
+  resolvedById    String?  @map("resolved_by")
+  resolvedAt      DateTime? @map("resolved_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  reporter        User @relation("ReporterReports", fields: [reporterId], references: [id])
+  listing         Listing? @relation(fields: [listingId], references: [id])
+  reportedUser    User? @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+  resolver        User? @relation("ResolverReports", fields: [resolvedById], references: [id])
+
+  @@map("reports")
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  label       String
+  description String
+
+  users       UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  userId     String   @map("user_id")
+  badgeId    String   @map("badge_id")
+  awardedAt  DateTime @default(now()) @map("awarded_at")
+
+  user       User @relation(fields: [userId], references: [id])
+  badge      Badge @relation(fields: [badgeId], references: [id])
+
+  @@id([userId, badgeId])
+  @@map("user_badges")
+}
+
+model ModerationAction {
+  id          String   @id @default(uuid())
+  adminId     String   @map("admin_id")
+  action      String
+  targetType  String   @map("target_type")
+  targetId    String   @map("target_id")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin       User @relation(fields: [adminId], references: [id])
+
+  @@map("moderation_actions")
+}
+
+model ListingView {
+  userId     String   @map("user_id")
+  listingId  String   @map("listing_id")
+  viewedAt   DateTime @default(now()) @map("viewed_at")
+
+  user       User @relation(fields: [userId], references: [id])
+  listing    Listing @relation(fields: [listingId], references: [id])
+
+  @@id([userId, listingId])
+  @@map("listing_views")
+}
