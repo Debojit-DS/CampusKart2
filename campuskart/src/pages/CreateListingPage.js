@@ -25,10 +25,17 @@ export async function renderCreateListingPage({ router } = {}) {
 
   // Fetch categories from backend
   try {
-    categories = await apiService.getCategories();
+    const fetched = await Promise.race([
+      apiService.getCategories(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Categories fetch timeout')), 5000)),
+    ]);
+    if (Array.isArray(fetched) && fetched.length > 0) {
+      categories = fetched;
+    } else {
+      throw new Error('Empty categories response');
+    }
   } catch (e) {
-    console.error('Error fetching categories:', e);
-    // Fallback to static categories
+    console.warn('Falling back to static categories:', e.message || e);
     categories = [
       { id: 'cat-academic', slug: 'academic', label: 'Academic' },
       { id: 'cat-hostel', slug: 'hostel', label: 'Hostel & Dorm' },
