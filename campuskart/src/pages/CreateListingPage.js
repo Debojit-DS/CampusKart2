@@ -46,7 +46,7 @@ export async function renderCreateListingPage({ router } = {}) {
         <!-- Header -->
         <div style="margin-bottom: 28px; text-align: center;">
           <div class="utility-label" style="color: var(--primary); margin-bottom: 6px;">POST TO CORKBOARD</div>
-          <h1 class="display-md" style="color: var(--on-surface);">Pin a New Notice</h1>
+          <h1 class="display-md" style="color: var(--on-surface);">Pin a New Listing</h1>
           <p class="body-md" style="color: var(--on-surface-variant); font-size: 14px;">
             Reach verified students across your college campus in seconds.
           </p>
@@ -345,7 +345,7 @@ export async function renderCreateListingPage({ router } = {}) {
       imageUrls
     });
 
-    toast.success('Notice successfully pinned to corkboard!');
+    toast.success('Listing successfully pinned to corkboard!');
     router.navigate(`/listing/${newListing.id}`);
   });
 

@@ -116,13 +116,13 @@ export async function renderFeedPage({ params = {}, queryParams = {}, router } =
           <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-container-highest); display: flex; align-items: center; justify-content: center; color: var(--primary); margin: 0 auto 16px;">
             <span class="material-symbols-outlined" style="font-size: 28px;">search_off</span>
           </div>
-          <h2 class="headline-sm" style="margin-bottom: 8px;">No notices pinned here yet</h2>
+          <h2 class="headline-sm" style="margin-bottom: 8px;">No listings pinned here yet</h2>
           <p class="body-md" style="color: var(--on-surface-variant); margin-bottom: 24px; font-size: 14px;">
             Be the first student to post an item or request in this category!
           </p>
           <div style="display: flex; justify-content: center; gap: 12px;">
             <a href="#/feed" class="btn btn-outlined btn-sm">Clear Filters</a>
-            <a href="#/listing/new" class="btn btn-primary btn-sm">Post a Notice</a>
+            <a href="#/listing/new" class="btn btn-primary btn-sm">Post a Listing</a>
           </div>
         </div>
       `;

@@ -34,7 +34,7 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
       ${renderTopNavBar({ activeRoute: '/feed' })}
       <main class="container-custom" style="flex: 1; padding: 80px 20px; text-align: center;">
         <h1 class="display-md text-primary" style="margin-bottom: 12px;">Listing Not Found</h1>
-        <p class="body-lg text-on-surface-variant" style="margin-bottom: 24px;">This notice might have expired, been sold, or removed.</p>
+        <p class="body-lg text-on-surface-variant" style="margin-bottom: 24px;">This listing might have expired, been sold, or removed.</p>
         <a href="#/feed" class="btn btn-primary">Back to Feed</a>
       </main>
       ${renderFooter()}
@@ -147,7 +147,7 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
 
           <div style="height: 1px; background: var(--surface-container);"></div>
 
-          <!-- Seller Info Card (Rotated Notice Style) -->
+           <!-- Seller Info Card (Rotated Listing Style) -->
           <a
             href="#/profile/${seller.id}"
             style="
@@ -353,7 +353,7 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
 
   // Owner Controls: Delete
   container.querySelector('#delete-listing-btn')?.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to remove this notice from the board?')) {
+    if (confirm('Are you sure you want to remove this listing from the board?')) {
       await apiService.deleteListing(listing.id);
       toast.info('Listing removed');
       router.navigate('/feed');

@@ -65,7 +65,7 @@ async function renderProfileContent(container, user, activeListings, soldListing
     ${renderTopNavBar({ activeRoute: '/profile' })}
 
     <main class="container-custom" style="flex: 1; padding-top: 36px; padding-bottom: 64px;">
-      <!-- Profile Header Notice Card -->
+      <!-- Profile Header Listing Card -->
       <div class="bg-surface-bright" style="
         border: 1px solid var(--surface-container);
         border-radius: var(--radius-lg);
@@ -100,7 +100,7 @@ async function renderProfileContent(container, user, activeListings, soldListing
             </div>
           </div>
 
-          <!-- Right: Actions (Logout / Post Notice) -->
+          <!-- Right: Actions (Logout / Post Listing) -->
           <div style="display: flex; gap: 10px;">
             ${isOwnProfile ? `
               <button type="button" id="edit-profile-btn" class="btn btn-outlined btn-sm">
@@ -109,7 +109,7 @@ async function renderProfileContent(container, user, activeListings, soldListing
               </button>
               <a href="#/listing/new" class="btn btn-primary btn-sm">
                 <span class="material-symbols-outlined">add</span>
-                <span>Post Notice</span>
+                 <span>Post Listing</span>
               </a>
               <button type="button" id="logout-btn" class="btn btn-outlined btn-sm" style="color: var(--error); border-color: rgba(193,97,63,0.4);">
                 <span class="material-symbols-outlined">logout</span>
@@ -149,7 +149,7 @@ async function renderProfileContent(container, user, activeListings, soldListing
       <div id="profile-listings-grid" class="corkboard-masonry">
         ${activeListings.length === 0 ? `
           <div style="padding: 40px; text-align: center; color: var(--on-surface-variant);">
-            <p>No active notices pinned right now.</p>
+             <p>No active listings pinned right now.</p>
           </div>
         ` : activeListings.map(item => renderListingCard(item)).join('')}
       </div>
@@ -169,7 +169,7 @@ async function renderProfileContent(container, user, activeListings, soldListing
     tabSoldBtn.style.color = 'var(--on-surface-variant)';
     tabSoldBtn.style.borderBottom = 'none';
     grid.innerHTML = activeListings.length === 0
-      ? `<div style="padding: 40px; text-align: center; color: var(--on-surface-variant);"><p>No active notices.</p></div>`
+      ? `<div style="padding: 40px; text-align: center; color: var(--on-surface-variant);"><p>No active listings.</p></div>`
       : activeListings.map(item => renderListingCard(item)).join('');
   });
 

@@ -82,7 +82,7 @@ export class Router {
         this.appContainer.innerHTML = `
           <div style="text-align: center; padding: 80px 20px;">
             <h1 class="display-md text-primary" style="margin-bottom: 12px;">404 — Pin Lost</h1>
-            <p class="body-lg text-on-surface-variant" style="margin-bottom: 24px;">The notice you are looking for has been removed from the board.</p>
+            <p class="body-lg text-on-surface-variant" style="margin-bottom: 24px;">The listing you are looking for has been removed from the board.</p>
             <a href="#/feed" class="btn btn-primary">Back to Feed</a>
           </div>
         `;

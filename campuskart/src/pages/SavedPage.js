@@ -28,7 +28,7 @@ export async function renderSavedPage({ router } = {}) {
       <div style="margin-bottom: 32px; display: flex; align-items: baseline; justify-content: space-between;">
         <div>
           <div class="utility-label" style="color: var(--primary); margin-bottom: 4px;">YOUR WATCHLIST</div>
-          <h1 class="display-md" style="color: var(--on-surface);">Saved Notices (${savedListings.length})</h1>
+          <h1 class="display-md" style="color: var(--on-surface);">Saved Listings (${savedListings.length})</h1>
         </div>
         <a href="#/feed" class="btn btn-outlined btn-sm">Explore More</a>
       </div>
@@ -40,9 +40,9 @@ export async function renderSavedPage({ router } = {}) {
           <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--surface-container-highest); display: flex; align-items: center; justify-content: center; color: var(--primary); margin: 0 auto 16px;">
             <span class="material-symbols-outlined" style="font-size: 28px;">bookmark_border</span>
           </div>
-          <h2 class="headline-sm" style="margin-bottom: 8px;">No saved notices yet</h2>
+          <h2 class="headline-sm" style="margin-bottom: 8px;">No saved listings yet</h2>
           <p class="body-md" style="color: var(--on-surface-variant); margin-bottom: 24px; font-size: 14px;">
-            Click the bookmark icon on any notice in the corkboard to save it for easy access later.
+            Click the bookmark icon on any listing on the corkboard to save it for easy access later.
           </p>
           <a href="#/feed" class="btn btn-primary btn-sm">Browse Corkboard</a>
         </div>
