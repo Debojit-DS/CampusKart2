@@ -36,7 +36,7 @@ export async function analyzeListingImage(imageUrl: string): Promise<AnalyzeImag
     const base64Image = imageBuffer.toString('base64');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.0-flash',
       contents: [
         {
           role: 'user',
