@@ -207,6 +207,13 @@ export const apiService = {
     });
   },
 
+  async analyzeListingImage(imageUrl) {
+    return await fetchWithRetry('/listings/analyze-image', {
+      method: 'POST',
+      body: JSON.stringify({ imageUrl }),
+    });
+  },
+
   async updateListing(id, updates) {
     return await fetchWithRetry(`/listings/${id}`, {
       method: 'PATCH',

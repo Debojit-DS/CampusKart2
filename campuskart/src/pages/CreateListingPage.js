@@ -133,6 +133,7 @@ export async function renderCreateListingPage({ router } = {}) {
 
               <!-- Preview thumbnail strip -->
               <div id="image-previews-container" style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;"></div>
+              <div id="ai-analysis-status" style="display: none; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--primary);"></div>
             </div>
 
             <!-- 3. Price & Currency -->
@@ -179,6 +180,7 @@ export async function renderCreateListingPage({ router } = {}) {
                   <option value="good" selected>Good (Light use)</option>
                   <option value="fair">Fair (Visible wear)</option>
                   <option value="new">Brand New / Unopened</option>
+                  <option value="poor">Poor (Heavy wear / Broken)</option>
                 </select>
               </div>
             </div>
@@ -298,6 +300,7 @@ export async function renderCreateListingPage({ router } = {}) {
     if (val) {
       addImageUrl(val);
       urlInput.value = '';
+      analyzeAndFillForm(val);
     }
   });
 
@@ -313,6 +316,7 @@ export async function renderCreateListingPage({ router } = {}) {
       try {
         const result = await cloudinaryService.upload(file, 'listings');
         uploadedImages.push({ id: `img-${Date.now()}`, url: result.url, sortOrder: uploadedImages.length });
+        analyzeAndFillForm(result.url);
       } catch (err) {
         console.error('Upload error:', err);
         toast.error('Image upload failed. Please try again.');
@@ -322,6 +326,84 @@ export async function renderCreateListingPage({ router } = {}) {
       renderPreviews();
     }
   });
+
+  async function analyzeAndFillForm(imageUrl) {
+    const aiStatusEl = document.getElementById('ai-analysis-status');
+    if (aiStatusEl) {
+      aiStatusEl.style.display = 'flex';
+      aiStatusEl.innerHTML = '<span class="loader-dots" style="display:flex;gap:4px;"><span class="loader-dot"></span><span class="loader-dot"></span><span class="loader-dot"></span></span> 🤖 AI is analyzing your item...';
+    }
+
+    try {
+      const result = await apiService.analyzeListingImage(imageUrl);
+
+      const titleInput = container.querySelector('#listing-title');
+      const descInput = container.querySelector('#listing-description');
+      const priceInput = container.querySelector('#listing-price');
+      const conditionSelect = container.querySelector('#listing-condition');
+      const categorySelect = container.querySelector('#listing-category');
+
+      if (titleInput && result.title) {
+        titleInput.value = result.title;
+        flashField(titleInput);
+      }
+      if (descInput && result.description) {
+        descInput.value = result.description;
+        flashField(descInput);
+      }
+      if (priceInput && result.suggestedPrice) {
+        priceInput.value = result.suggestedPrice;
+        flashField(priceInput);
+      }
+      if (conditionSelect && result.condition) {
+        const conditionMap = {
+          'NEW': 'new',
+          'LIKE_NEW': 'like_new',
+          'GOOD': 'good',
+          'FAIR': 'fair',
+          'POOR': 'poor',
+        };
+        const mapped = conditionMap[result.condition];
+        if (mapped) {
+          conditionSelect.value = mapped;
+          flashField(conditionSelect);
+        }
+      }
+      if (categorySelect && result.categorySlug) {
+        const categoryMap = {
+          'academic': 'cat-academic',
+          'hostel': 'cat-hostel',
+          'electronics': 'cat-electronics',
+          'cycles': 'cat-cycles',
+          'stationery': 'cat-stationery',
+        };
+        const categoryId = categoryMap[result.categorySlug.toLowerCase()];
+        if (categoryId) {
+          categorySelect.value = categoryId;
+          flashField(categorySelect);
+        }
+      }
+
+      if (aiStatusEl) {
+        aiStatusEl.innerHTML = '✨ AI suggestions applied! Feel free to edit anything.';
+        setTimeout(() => { if (aiStatusEl) aiStatusEl.style.display = 'none'; }, 4000);
+      }
+    } catch (err) {
+      console.error('AI analysis failed:', err);
+      if (aiStatusEl) {
+        aiStatusEl.innerHTML = '⚠️ Could not analyze image. Please fill the form manually.';
+        setTimeout(() => { if (aiStatusEl) aiStatusEl.style.display = 'none'; }, 4000);
+      }
+    }
+  }
+
+  function flashField(element) {
+    element.style.transition = 'background-color 0.5s ease';
+    element.style.backgroundColor = 'rgba(124, 58, 237, 0.15)';
+    setTimeout(() => {
+      element.style.backgroundColor = '';
+    }, 1500);
+  }
 
   // Form submit
   const form = container.querySelector('#create-listing-form');

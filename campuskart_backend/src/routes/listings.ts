@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireVerified, AuthRequest } from '../middleware/auth.js';
 import { moderateText } from '../services/moderation.js';
+import { analyzeListingImage } from '../services/aiVision.js';
 
 const router = Router();
 
@@ -227,6 +228,19 @@ router.get('/:id/similar', requireAuth, async (req: AuthRequest, res: Response) 
   } catch (err) {
     console.error('Get similar listings error:', err);
     return res.status(500).json({ error: 'INTERNAL_ERROR' });
+  }
+});
+
+// POST /listings/analyze-image
+router.post('/analyze-image', requireAuth, requireVerified, async (req: AuthRequest, res: Response) => {
+  try {
+    const body = z.object({ imageUrl: z.string().url() }).parse(req.body);
+
+    const result = await analyzeListingImage(body.imageUrl);
+    return res.json(result);
+  } catch (err) {
+    console.error('Analyze image error:', err);
+    return res.status(422).json({ error: 'ANALYSIS_FAILED', message: 'Could not analyze this image. Please fill the form manually.' });
   }
 });
 
