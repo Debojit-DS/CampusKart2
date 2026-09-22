@@ -71,6 +71,7 @@ export async function renderAdminPage({ router } = {}) {
           } else if (tab === 'users') {
             const users = await apiService.adminGetUsers();
             content.innerHTML = renderUsersTab(users, router);
+            bindUserAdminButtons(content, router);
           } else if (tab === 'listings') {
             const listings = await apiService.adminGetListings();
             content.innerHTML = renderListingsTab(listings, router);
@@ -190,18 +191,27 @@ function renderUsersTab(users, router) {
         </tbody>
       </table>
     </div>
-    <script>
-      document.querySelectorAll('.admin-suspend-btn, .admin-ban-btn, .admin-activate-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await apiService.adminUpdateUser(btn.dataset.id, btn.dataset.status);
-            toast.success('User updated');
-            router.handleRouteChange();
-          } catch (e) { toast.error(ErrorHandler.getErrorMessage(e)); }
-        });
-      });
-    </script>
   `;
+}
+
+function bindUserAdminButtons(container, router) {
+  container.querySelectorAll('.admin-suspend-btn, .admin-ban-btn, .admin-activate-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        const id = btn.dataset.id;
+        const status = btn.dataset.status;
+        let reason = '';
+        if (status === 'suspended' || status === 'banned') {
+          reason = prompt(`Reason for ${status}:`) || '';
+        }
+        await apiService.adminUpdateUser(id, status, reason);
+        toast.success('User updated');
+        router.handleRouteChange();
+      } catch (e) {
+        toast.error(ErrorHandler.getErrorMessage(e));
+      }
+    });
+  });
 }
 
 function renderListingsTab(listings, router) {
