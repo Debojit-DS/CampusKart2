@@ -75,6 +75,7 @@ export async function renderAdminPage({ router } = {}) {
           } else if (tab === 'listings') {
             const listings = await apiService.adminGetListings();
             content.innerHTML = renderListingsTab(listings, router);
+            bindListingAdminButtons(content, router);
           } else if (tab === 'reports') {
             const reports = await apiService.adminGetReports();
             content.innerHTML = renderReportsTab(reports, router);
@@ -250,6 +251,23 @@ function renderListingsTab(listings, router) {
       </table>
     </div>
   `;
+}
+
+function bindListingAdminButtons(container, router) {
+  container.querySelectorAll('.admin-remove-listing-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        if (!confirm('Are you sure you want to remove this listing?')) return;
+        const id = btn.dataset.id;
+        const reason = prompt('Reason for removal:') || '';
+        await apiService.adminRemoveListing(id, reason);
+        toast.success('Listing removed');
+        router.handleRouteChange();
+      } catch (e) {
+        toast.error(ErrorHandler.getErrorMessage(e));
+      }
+    });
+  });
 }
 
 function renderReportsTab(reports, router) {
