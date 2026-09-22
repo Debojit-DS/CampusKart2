@@ -69,13 +69,31 @@ export function renderLoginPage({ queryParams = {}, router } = {}) {
           <div class="form-input-wrapper">
             <span class="material-symbols-outlined form-input-icon">mail</span>
             <input
-              type="email"
-              id="login-email"
-              class="form-input has-icon"
-              placeholder="student@college.edu"
-              value="${defaultEmail}"
+              type="text"
+              id="login-email-username"
+              class="form-input"
+              placeholder="yourname"
               required
+              style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
             />
+            <span style="
+              position: absolute;
+              right: 0;
+              top: 0;
+              bottom: 0;
+              width: auto;
+              padding: 0 12px;
+              display: flex;
+              align-items: center;
+              background: var(--surface-container);
+              color: var(--on-surface-variant);
+              font-family: var(--font-mono);
+              font-size: 14px;
+              border-top-right-radius: var(--radius-default);
+              border-bottom-right-radius: var(--radius-default);
+              border-left: 1px solid var(--surface-container-high);
+              pointer-events: none;
+            ">@heritageit.edu.in</span>
           </div>
         </div>
 
@@ -144,10 +162,11 @@ export function renderLoginPage({ queryParams = {}, router } = {}) {
     e.preventDefault();
     errorBanner.style.display = 'none';
 
-    const email = container.querySelector('#login-email').value.trim();
+    const username = container.querySelector('#login-email-username').value.trim();
+    const email = `${username}@heritageit.edu.in`;
     const password = pwdInput.value;
 
-    if (!email || !password) {
+    if (!username || !password) {
       errorBanner.innerText = 'Please enter your college email and password.';
       errorBanner.style.display = 'block';
       return;
@@ -162,16 +181,16 @@ export function renderLoginPage({ queryParams = {}, router } = {}) {
       </div>
     `;
 
-      try {
-        await store.login(email, password);
-        toast.success('Logged in successfully!');
-        router.navigate(returnUrl);
-      } catch (err) {
-        errorBanner.innerText = 'Invalid credentials or network error. Please try again.';
-        errorBanner.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>${submitLabel}</span><span class="material-symbols-outlined">arrow_forward</span>`;
-      }
+    try {
+      await store.login(email, password);
+      toast.success('Logged in successfully!');
+      router.navigate(returnUrl);
+    } catch (err) {
+      errorBanner.innerText = 'Invalid credentials or network error. Please try again.';
+      errorBanner.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span>${submitLabel}</span><span class="material-symbols-outlined">arrow_forward</span>`;
+    }
   });
 
   return container;

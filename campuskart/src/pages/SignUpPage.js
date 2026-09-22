@@ -62,14 +62,33 @@ export function renderSignUpPage({ router } = {}) {
           <div class="form-input-wrapper">
             <span class="material-symbols-outlined form-input-icon">mail</span>
             <input
-              type="email"
-              id="signup-email"
-              class="form-input has-icon"
-              placeholder="yourname@college.edu"
+              type="text"
+              id="signup-email-username"
+              class="form-input"
+              placeholder="yourname"
               required
+              style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
             />
+            <span style="
+              position: absolute;
+              right: 0;
+              top: 0;
+              bottom: 0;
+              width: auto;
+              padding: 0 12px;
+              display: flex;
+              align-items: center;
+              background: var(--surface-container);
+              color: var(--on-surface-variant);
+              font-family: var(--font-mono);
+              font-size: 14px;
+              border-top-right-radius: var(--radius-default);
+              border-bottom-right-radius: var(--radius-default);
+              border-left: 1px solid var(--surface-container-high);
+              pointer-events: none;
+            ">@heritageit.edu.in</span>
           </div>
-          <div class="form-helper">Must use your official .edu email to verify your student status.</div>
+          <div class="form-helper">Must use your official college email to verify your student status.</div>
         </div>
 
         <!-- 2. Full Name -->
@@ -178,16 +197,15 @@ export function renderSignUpPage({ router } = {}) {
     e.preventDefault();
     errorBanner.style.display = 'none';
 
-    const email = container.querySelector('#signup-email').value.trim();
+    const username = container.querySelector('#signup-email-username').value.trim();
+    const email = `${username}@heritageit.edu.in`;
     const fullName = container.querySelector('#signup-name').value.trim();
     const password = pwdInput.value;
     const department = container.querySelector('#signup-dept').value;
     const yearOfStudy = container.querySelector('#signup-year').value;
 
-    // Hard validation rule per PRD §5.3: reject non-.edu/institutional domains client-side
-    const isEduDomain = email.toLowerCase().includes('.edu') || email.toLowerCase().includes('.ac.') || email.toLowerCase().includes('.org');
-    if (!isEduDomain) {
-      errorBanner.innerText = 'Please use a valid official institutional (.edu) email address.';
+    if (!username || !fullName || !password) {
+      errorBanner.innerText = 'Please fill in all required fields.';
       errorBanner.style.display = 'block';
       return;
     }
