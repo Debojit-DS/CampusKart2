@@ -8,6 +8,31 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 let accessToken = null;
 let isRefreshing = false;
 
+const cache = new Map();
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+function getCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCache(key, value) {
+  cache.set(key, { value, expiry: Date.now() + CACHE_TTL });
+}
+
+function invalidateCache(key) {
+  if (key) {
+    cache.delete(key);
+  } else {
+    cache.clear();
+  }
+}
+
 function setAccessToken(token) {
   accessToken = token;
   if (token) {
@@ -18,6 +43,16 @@ function setAccessToken(token) {
 }
 
 async function fetchAPI(path, options = {}) {
+  const isGet = (!options.method || options.method === 'GET');
+  const cacheKey = isGet ? path : null;
+
+  if (cacheKey) {
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -44,6 +79,10 @@ async function fetchAPI(path, options = {}) {
     error.data = data;
     error.status = response.status;
     throw error;
+  }
+
+  if (cacheKey) {
+    setCache(cacheKey, data);
   }
 
   return data;
@@ -101,6 +140,7 @@ async function fetchWithRetry(path, options = {}) {
 
 export const apiService = {
   setAccessToken,
+  invalidateCache,
 
   // Auth
   async signup(data) {
@@ -201,10 +241,12 @@ export const apiService = {
   },
 
   async createListing(listingData) {
-    return await fetchWithRetry('/listings', {
+    const result = await fetchWithRetry('/listings', {
       method: 'POST',
       body: JSON.stringify(listingData),
     });
+    invalidateCache('/listings');
+    return result;
   },
 
   async analyzeListingImage(imageUrl) {
@@ -215,22 +257,30 @@ export const apiService = {
   },
 
   async updateListing(id, updates) {
-    return await fetchWithRetry(`/listings/${id}`, {
+    const result = await fetchWithRetry(`/listings/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
+    invalidateCache('/listings');
+    invalidateCache(`/listings/${id}`);
+    return result;
   },
 
   async deleteListing(id) {
-    return await fetchWithRetry(`/listings/${id}`, {
+    const result = await fetchWithRetry(`/listings/${id}`, {
       method: 'DELETE',
     });
+    invalidateCache('/listings');
+    invalidateCache(`/listings/${id}`);
+    return result;
   },
 
   async toggleBookmark(id) {
-    return await fetchWithRetry(`/listings/${id}/bookmark`, {
+    const result = await fetchWithRetry(`/listings/${id}/bookmark`, {
       method: 'POST',
     });
+    invalidateCache('/listings/bookmarks');
+    return result;
   },
 
   async getSavedListings() {
@@ -252,31 +302,39 @@ export const apiService = {
   },
 
   async createConversation(listingId) {
-    return await fetchWithRetry('/conversations', {
+    const result = await fetchWithRetry('/conversations', {
       method: 'POST',
       body: JSON.stringify({ listingId }),
     });
+    invalidateCache('/conversations');
+    return result;
   },
 
   async sendMessage(conversationId, data) {
-    return await fetchWithRetry(`/conversations/${conversationId}/messages`, {
+    const result = await fetchWithRetry(`/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    invalidateCache('/conversations');
+    return result;
   },
 
   async makeOffer(conversationId, amount) {
-    return await fetchWithRetry(`/offers/conversations/${conversationId}/offers`, {
+    const result = await fetchWithRetry(`/offers/conversations/${conversationId}/offers`, {
       method: 'POST',
       body: JSON.stringify({ amount, currency: 'INR' }),
     });
+    invalidateCache('/conversations');
+    return result;
   },
 
   async respondToOffer(offerId, action, amount) {
-    return await fetchWithRetry(`/offers/${offerId}`, {
+    const result = await fetchWithRetry(`/offers/${offerId}`, {
       method: 'PATCH',
       body: JSON.stringify({ action, amount }),
     });
+    invalidateCache('/conversations');
+    return result;
   },
 
   // Notifications
@@ -289,15 +347,19 @@ export const apiService = {
   },
 
   async markNotificationRead(id) {
-    return await fetchWithRetry(`/notifications/${id}/read`, {
+    const result = await fetchWithRetry(`/notifications/${id}/read`, {
       method: 'PATCH',
     });
+    invalidateCache('/notifications');
+    return result;
   },
 
   async markAllNotificationsRead() {
-    return await fetchWithRetry('/notifications/read-all', {
+    const result = await fetchWithRetry('/notifications/read-all', {
       method: 'PATCH',
     });
+    invalidateCache('/notifications');
+    return result;
   },
 
   // Users & Profiles
@@ -310,10 +372,12 @@ export const apiService = {
   },
 
   async updateMyProfile(updates) {
-    return await fetchWithRetry('/users/me', {
+    const result = await fetchWithRetry('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
+    invalidateCache('/users/me');
+    return result;
   },
 
   async getMyBadges() {
@@ -335,24 +399,30 @@ export const apiService = {
   },
 
   async addToWishlist(keyword, categoryId) {
-    return await fetchWithRetry('/wishlist', {
+    const result = await fetchWithRetry('/wishlist', {
       method: 'POST',
       body: JSON.stringify({ keyword, categoryId }),
     });
+    invalidateCache('/wishlist');
+    return result;
   },
 
   async removeFromWishlist(id) {
-    return await fetchWithRetry(`/wishlist/${id}`, {
+    const result = await fetchWithRetry(`/wishlist/${id}`, {
       method: 'DELETE',
     });
+    invalidateCache('/wishlist');
+    return result;
   },
 
   // Reports
   async submitReport(data) {
-    return await fetchWithRetry('/reports', {
+    const result = await fetchWithRetry('/reports', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    invalidateCache('/listings');
+    return result;
   },
 
   // Admin
@@ -366,10 +436,13 @@ export const apiService = {
   },
 
   async adminUpdateUser(id, status, reason) {
-    return await fetchWithRetry(`/admin/users/${id}`, {
+    const result = await fetchWithRetry(`/admin/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status, reason }),
     });
+    invalidateCache('/admin/users');
+    invalidateCache('/users/me');
+    return result;
   },
 
   async adminGetListings(params = {}) {
@@ -381,10 +454,13 @@ export const apiService = {
   },
 
   async adminRemoveListing(id, reason) {
-    return await fetchWithRetry(`/admin/listings/${id}`, {
+    const result = await fetchWithRetry(`/admin/listings/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ reason }),
     });
+    invalidateCache('/listings');
+    invalidateCache('/admin/listings');
+    return result;
   },
 
   async adminGetReports(status = '') {
@@ -393,10 +469,12 @@ export const apiService = {
   },
 
   async adminResolveReport(id, status, resolutionNote) {
-    return await fetchWithRetry(`/admin/reports/${id}`, {
+    const result = await fetchWithRetry(`/admin/reports/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status, resolutionNote }),
     });
+    invalidateCache('/admin/reports');
+    return result;
   },
 
   async adminGetAnalytics() {

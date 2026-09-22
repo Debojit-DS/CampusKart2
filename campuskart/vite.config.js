@@ -12,6 +12,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    fs: {
+      strict: false,
+    },
   },
   build: {
     outDir: 'dist',
@@ -20,5 +23,8 @@ export default defineConfig({
     alias: {
       'socket.io-client': '/src/vendor/socket.io.esm.min.js',
     },
+  },
+  optimizeDeps: {
+    include: [],
   },
 });
