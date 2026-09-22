@@ -266,7 +266,7 @@ export const apiService = {
   },
 
   async makeOffer(conversationId, amount) {
-    return await fetchWithRetry(`/conversations/${conversationId}/offers`, {
+    return await fetchWithRetry(`/offers/conversations/${conversationId}/offers`, {
       method: 'POST',
       body: JSON.stringify({ amount, currency: 'INR' }),
     });
