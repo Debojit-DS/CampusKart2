@@ -48,12 +48,16 @@ router.post('/conversations/:conversationId/offers', requireAuth, requireVerifie
         },
       });
 
-      await tx.message.create({
+      const message = await tx.message.create({
         data: {
           conversationId,
           senderId: req.user!.id,
           type: 'offer',
           offerId: offer.id,
+        },
+        include: {
+          sender: { select: { id: true, fullName: true, avatarUrl: true } },
+          offer: true,
         },
       });
 
@@ -65,16 +69,17 @@ router.post('/conversations/:conversationId/offers', requireAuth, requireVerifie
         },
       });
 
-      return offer;
+      return { offer, message };
     });
 
     const otherUserId = conversation.buyerId === req.user!.id ? conversation.sellerId : conversation.buyerId;
-    await sendNotification(otherUserId, 'new_offer', { offerId: result.id, conversationId });
+    await sendNotification(otherUserId, 'new_offer', { offerId: result.offer.id, conversationId });
 
-    // Emit real-time event
-    emitToConversation(conversationId, 'offer_update', { offer: result, action: 'created' });
+    // Emit real-time events
+    emitToConversation(conversationId, 'new_message', result.message);
+    emitToConversation(conversationId, 'offer_update', { offer: result.offer, action: 'created' });
 
-    return res.status(201).json(result);
+    return res.status(201).json(result.offer);
   } catch (err) {
     console.error('Create offer error:', err);
     if (err instanceof z.ZodError) {
@@ -108,51 +113,59 @@ router.patch('/:id', requireAuth, requireVerified, async (req: AuthRequest, res:
     }
 
     if (data.action === 'accept') {
-      const updated = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const accepted = await tx.offer.update({
           where: { id: offerId },
           data: { status: 'accepted' },
         });
 
-        await tx.message.create({
+        const message = await tx.message.create({
           data: {
             conversationId: offer.conversationId,
             senderId: req.user!.id,
             type: 'system',
             text: `Offer of ₹${offer.amount} accepted!`,
           },
+          include: {
+            sender: { select: { id: true, fullName: true, avatarUrl: true } },
+          },
         });
 
-        return accepted;
+        return { accepted, message };
       });
 
       await sendNotification(offer.proposedById, 'offer_accepted', { offerId: offer.id, conversationId: offer.conversationId });
-      emitToConversation(offer.conversationId, 'offer_update', { offer: updated, action: 'accepted' });
-      return res.json(updated);
+      emitToConversation(offer.conversationId, 'new_message', result.message);
+      emitToConversation(offer.conversationId, 'offer_update', { offer: result.accepted, action: 'accepted' });
+      return res.json(result.accepted);
     }
 
     if (data.action === 'reject') {
-      const updated = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const rejected = await tx.offer.update({
           where: { id: offerId },
           data: { status: 'rejected' },
         });
 
-        await tx.message.create({
+        const message = await tx.message.create({
           data: {
             conversationId: offer.conversationId,
             senderId: req.user!.id,
             type: 'system',
             text: `Offer of ₹${offer.amount} rejected.`,
           },
+          include: {
+            sender: { select: { id: true, fullName: true, avatarUrl: true } },
+          },
         });
 
-        return rejected;
+        return { rejected, message };
       });
 
       await sendNotification(offer.proposedById, 'offer_rejected', { offerId: offer.id, conversationId: offer.conversationId });
-      emitToConversation(offer.conversationId, 'offer_update', { offer: updated, action: 'rejected' });
-      return res.json(updated);
+      emitToConversation(offer.conversationId, 'new_message', result.message);
+      emitToConversation(offer.conversationId, 'offer_update', { offer: result.rejected, action: 'rejected' });
+      return res.json(result.rejected);
     }
 
     if (data.action === 'counter') {
@@ -180,12 +193,16 @@ router.patch('/:id', requireAuth, requireVerified, async (req: AuthRequest, res:
           },
         });
 
-        await tx.message.create({
+        const message = await tx.message.create({
           data: {
             conversationId: offer.conversationId,
             senderId: req.user!.id,
             type: 'offer',
             offerId: counter.id,
+          },
+          include: {
+            sender: { select: { id: true, fullName: true, avatarUrl: true } },
+            offer: true,
           },
         });
 
@@ -197,12 +214,13 @@ router.patch('/:id', requireAuth, requireVerified, async (req: AuthRequest, res:
           },
         });
 
-        return counter;
+        return { counter, message };
       });
 
-      await sendNotification(offer.proposedById, 'new_offer', { offerId: result.id, conversationId: offer.conversationId });
-      emitToConversation(offer.conversationId, 'offer_update', { offer: result, action: 'countered' });
-      return res.json(result);
+      await sendNotification(offer.proposedById, 'new_offer', { offerId: result.counter.id, conversationId: offer.conversationId });
+      emitToConversation(offer.conversationId, 'new_message', result.message);
+      emitToConversation(offer.conversationId, 'offer_update', { offer: result.counter, action: 'countered' });
+      return res.json(result.counter);
     }
   } catch (err) {
     console.error('Respond to offer error:', err);

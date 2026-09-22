@@ -296,19 +296,27 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
       msgInput.value = '';
       msgInput.style.height = '40px';
 
-      await apiService.sendMessage(activeConv.id, { text, type: 'text' });
-      router.handleRouteChange();
+      try {
+        await apiService.sendMessage(activeConv.id, { text, type: 'text' });
+      } catch (err) {
+        console.error('Send message error:', err);
+        toast.error('Failed to send message.');
+      }
     });
 
     // Share Location quick pill
     quickLocBtn?.addEventListener('click', async () => {
-      await apiService.sendMessage(activeConv.id, {
-        type: 'location',
-        text: `Campus Safe Pickup: ${activeListing.pickupLocation || ''}`,
-        locationLabel: activeListing.pickupLocation || ''
-      });
-      toast.success('Pickup spot shared in chat!');
-      router.handleRouteChange();
+      try {
+        await apiService.sendMessage(activeConv.id, {
+          type: 'location',
+          text: `Campus Safe Pickup: ${activeListing.pickupLocation || ''}`,
+          locationLabel: activeListing.pickupLocation || ''
+        });
+        toast.success('Pickup spot shared in chat!');
+      } catch (err) {
+        console.error('Send location error:', err);
+        toast.error('Failed to share location.');
+      }
     });
 
     // Make an offer quick pill
@@ -316,9 +324,13 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
       openOfferModal({
         listing: activeListing,
         onSubmit: async (amount) => {
-          await apiService.makeOffer(activeConv.id, amount);
-          toast.success(`Offer of ₹${amount} sent!`);
-          router.handleRouteChange();
+          try {
+            await apiService.makeOffer(activeConv.id, amount);
+            toast.success(`Offer of ₹${amount} sent!`);
+          } catch (err) {
+            console.error('Make offer error:', err);
+            toast.error('Failed to send offer.');
+          }
         }
       });
     });
@@ -335,7 +347,6 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
           imageUrl: result.url,
           text: 'Attached image'
         });
-        router.handleRouteChange();
       } catch (err) {
         console.error('Image upload error:', err);
         toast.error('Failed to upload image. Please try again.');
