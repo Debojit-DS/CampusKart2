@@ -297,7 +297,8 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
       msgInput.style.height = '40px';
 
       try {
-        await apiService.sendMessage(activeConv.id, { text, type: 'text' });
+        const sent = await apiService.sendMessage(activeConv.id, { text, type: 'text' });
+        appendMessageToTimeline(sent);
       } catch (err) {
         console.error('Send message error:', err);
         toast.error('Failed to send message.');
@@ -307,12 +308,13 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
     // Share Location quick pill
     quickLocBtn?.addEventListener('click', async () => {
       try {
-        await apiService.sendMessage(activeConv.id, {
+        const sent = await apiService.sendMessage(activeConv.id, {
           type: 'location',
           text: `Campus Safe Pickup: ${activeListing.pickupLocation || ''}`,
           locationLabel: activeListing.pickupLocation || ''
         });
         toast.success('Pickup spot shared in chat!');
+        appendMessageToTimeline(sent);
       } catch (err) {
         console.error('Send location error:', err);
         toast.error('Failed to share location.');
@@ -325,11 +327,12 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
         listing: activeListing,
         onSubmit: async (amount) => {
           try {
-            await apiService.makeOffer(activeConv.id, amount);
+            const sent = await apiService.makeOffer(activeConv.id, amount);
             toast.success(`Offer of ₹${amount} sent!`);
+            appendMessageToTimeline({ ...sent, type: 'offer', senderId: currentUser.id, offerId: sent.id });
           } catch (err) {
             console.error('Make offer error:', err);
-            toast.error('Failed to send offer.');
+            toast.error(`Failed to send offer: ${err.message || 'Unknown error'}`);
           }
         }
       });
@@ -342,11 +345,12 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
       toast.info('Uploading image...');
       try {
         const result = await cloudinaryService.upload(file, 'chat');
-        await apiService.sendMessage(activeConv.id, {
+        const sent = await apiService.sendMessage(activeConv.id, {
           type: 'image',
           imageUrl: result.url,
           text: 'Attached image'
         });
+        appendMessageToTimeline(sent);
       } catch (err) {
         console.error('Image upload error:', err);
         toast.error('Failed to upload image. Please try again.');
@@ -396,6 +400,18 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
         socketService.sendTyping(activeConv.id, false);
       }, 2000);
     });
+
+    window.appendMessageToTimeline = function appendMessageToTimeline(message) {
+      if (!message || !activeConv) return;
+      if (message.conversationId !== activeConv.id) return;
+      const canvas = container.querySelector('#message-canvas');
+      const timeline = container.querySelector('#messages-timeline');
+      if (!canvas || !timeline) return;
+      const isCurrentUser = message.senderId === currentUser.id;
+      const bubble = renderMessageBubble(message, { isCurrentUserSeller: isSellerInActiveConv });
+      timeline.insertAdjacentHTML('beforeend', bubble);
+      canvas.scrollTop = canvas.scrollHeight;
+    };
   }
 
   return container;

@@ -66,7 +66,16 @@ export const socketService = {
   joinConversation(conversationId) {
     if (socket?.connected) {
       socket.emit('conversation:join', { conversationId });
+      return;
     }
+    const tryJoin = () => {
+      if (socket?.connected) {
+        socket.emit('conversation:join', { conversationId });
+      } else {
+        setTimeout(tryJoin, 100);
+      }
+    };
+    tryJoin();
   },
 
   leaveConversation(conversationId) {
