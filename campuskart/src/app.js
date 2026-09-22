@@ -26,12 +26,21 @@ import { renderStaticLegalPage } from './pages/StaticLegalPage.js';
 
 // Helper to mount pages into DOM
 async function mountView(appRoot, renderFnOrPromise) {
-  appRoot.innerHTML = '';
+  appRoot.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; height: 60vh;">
+      <div class="loader-dots" style="display: flex; gap: 6px;">
+        <span class="loader-dot"></span>
+        <span class="loader-dot"></span>
+        <span class="loader-dot"></span>
+      </div>
+    </div>
+  `;
   try {
     const result = await renderFnOrPromise;
     if (typeof result === 'string') {
       appRoot.innerHTML = result;
     } else if (result instanceof HTMLElement) {
+      appRoot.innerHTML = '';
       appRoot.appendChild(result);
     }
   } catch (err) {

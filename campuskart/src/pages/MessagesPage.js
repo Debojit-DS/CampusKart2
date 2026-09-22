@@ -19,8 +19,6 @@ import { escapeHtml } from '../utils/formatters.js';
 export async function renderMessagesPage({ params = {}, router } = {}) {
   const activeConvId = params.conversationId || null;
   const currentUser = store.getCurrentUser() || {};
-  const conversations = await apiService.getConversations();
-  if (!conversations) return container; // Auth failed, redirecting to login
 
   const container = document.createElement('div');
   container.style.cssText = `
@@ -30,6 +28,41 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
     overflow: hidden;
     background-color: var(--background);
   `;
+
+  container.innerHTML = `
+    ${renderTopNavBar({ activeRoute: '/messages' })}
+    <div style="flex: 1; display: flex; overflow: hidden; height: calc(100vh - 64px);">
+      <div style="width: 360px; min-width: 300px; border-right: 1px solid var(--surface-container); background-color: var(--surface); display: flex; flex-direction: column; flex-shrink: 0;">
+        <div style="padding: 18px 20px; border-bottom: 1px solid var(--surface-container); display: flex; align-items: center; justify-content: space-between;">
+          <h2 class="headline-sm" style="font-size: 20px; color: var(--on-surface); margin: 0;">Messages</h2>
+        </div>
+        <div style="flex: 1; overflow-y: auto; display: flex; align-items: center; justify-content: center;">
+          <div class="loader-dots" style="display: flex; gap: 6px;">
+            <span class="loader-dot"></span>
+            <span class="loader-dot"></span>
+            <span class="loader-dot"></span>
+          </div>
+        </div>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; background-color: var(--background); position: relative; overflow: hidden;">
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;">
+          <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--surface-container-high); display: flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 16px;">
+            <span class="material-symbols-outlined" style="font-size: 32px;">forum</span>
+          </div>
+          <h3 class="headline-sm" style="margin-bottom: 8px;">Select a conversation</h3>
+          <p class="body-md" style="color: var(--on-surface-variant); max-width: 360px;">Loading your messages...</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let conversations = [];
+  try {
+    conversations = await apiService.getConversations() || [];
+  } catch (e) {
+    console.error('Error loading conversations:', e);
+  }
+  if (!conversations) return container;
 
   // Determine active conversation details
   let activeConv = null;
