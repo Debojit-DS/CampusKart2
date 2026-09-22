@@ -327,8 +327,12 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
 
   // Buyer Action: Message Seller
   container.querySelector('#message-seller-btn')?.addEventListener('click', async () => {
-    const conv = await apiService.createConversation(listing.id);
-    router.navigate(`/messages/${conv.id}`);
+    try {
+      const conv = await apiService.createConversation(listing.id);
+      router.navigate(`/messages/${conv.id}`);
+    } catch (e) {
+      toast.error(ErrorHandler.getErrorMessage(e));
+    }
   });
 
   // Buyer Action: Make an Offer
@@ -336,10 +340,14 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
     openOfferModal({
       listing,
       onSubmit: async (amount) => {
-        const conv = await apiService.createConversation(listing.id);
-        await apiService.makeOffer(conv.id, amount);
-        toast.success(`Offer of ₹${amount} sent to seller!`);
-        router.navigate(`/messages/${conv.id}`);
+        try {
+          const conv = await apiService.createConversation(listing.id);
+          await apiService.makeOffer(conv.id, amount);
+          toast.success(`Offer of ₹${amount} sent to seller!`);
+          router.navigate(`/messages/${conv.id}`);
+        } catch (e) {
+          toast.error(ErrorHandler.getErrorMessage(e));
+        }
       }
     });
   });
