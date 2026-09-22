@@ -2,28 +2,46 @@
 
 ## 1. Overview
 
-CampusKart is a campus-only peer-to-peer marketplace designed for college students to buy, sell, and trade items within their institution. It combines a corkboard-style listing feed with real-time messaging, offer negotiation, and admin moderation — all restricted to verified `.edu`/institutional email domains.
+CampusKart is a campus-only peer-to-peer marketplace designed for college students to buy, sell, and trade items within their institution. It combines a corkboard-style listing feed with real-time messaging, offer negotiation, and admin moderation — all restricted to verified institutional email domains.
 
 ---
 
 ## 2. Architecture
 
+### Development
 ```
-┌─────────────────┐        HTTPS/API         ┌──────────────────┐      SQL/WS      ┌──────────────┐
-│   Browser       │ ───────────────────────▶ │   Render (Backend)│ ──────────────▶ │   Neon DB    │
-│  (Vercel)       │                          │  Express + TS     │                 │ PostgreSQL   │
-│                 │ ◀─────────────────────── │  Socket.IO        │ ◀────────────── │              │
-└─────────────────┘                          └──────────────────┘                 └──────────────┘
+┌─────────────────┐     localhost:5173      ┌──────────────────┐     localhost:5000      ┌──────────────┐
+│   Browser       │ ───────────────────────▶ │   Vite Dev       │ ──────────────────────▶ │   Express    │
+│                 │                          │   Server         │                        │   + TS       │
+│                 │ ◀─────────────────────── │   (proxy /api)   │ ◀───────────────────── │   Prisma     │
+└─────────────────┘                          └──────────────────┘                        └──────────────┘
+                                                                                                   │
+                                                                                              SQL / WS
+                                                                                                   │
+                                                                                        ┌──────────────┐
+                                                                                        │   Neon DB    │
+                                                                                        │ PostgreSQL   │
+                                                                                        └──────────────┘
+```
+
+### Production
+```
+┌─────────────────┐          HTTPS/API         ┌──────────────────┐       SQL/WS        ┌──────────────┐
+ │   Browser       │ ────────────────────────▶ │   Render        │ ──────────────────▶ │   Neon DB    │
+ │  (Vercel)       │                           │  Express + TS    │                    │ PostgreSQL   │
+ │                 │ ◀──────────────────────── │  Socket.IO       │ ◀───────────────── │              │
+ └─────────────────┘                           └──────────────────┘                    └──────────────┘
 ```
 
 ### Frontend
 - **Type:** Vanilla JavaScript SPA (no framework)
-- **Bundler/Dev Server:** Vite 6
+- **Bundler/Dev Server:** Vite 6 on `localhost:5173`
 - **Routing:** Hash-based (`#/...`)
 - **Real-time:** Socket.IO client 4.8
 - **State:** In-memory reactive store + `localStorage` persistence
 - **Styling:** Custom CSS with CSS variables / theme tokens
-- **Deployment:** Vercel (static build)
+- **Dev Proxy:** Vite proxies `/api/*` and `/socket.io/*` to backend on port 5000
+- **Deployment:** Vercel (static build with rewrites)
 
 ### Backend
 - **Runtime:** Node.js
@@ -39,7 +57,7 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 - **Validation:** Zod
 - **Testing:** Vitest + Supertest
 - **Linting:** ESLint 9 + TypeScript ESLint
-- **Deployment:** Render
+- **Deployment:** Render or Docker + nginx
 
 ---
 
@@ -152,8 +170,8 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 | Feature | Description |
 |---------|-------------|
 | **Analytics** | Total users, active/sold listings, 7d/30d signups, top 5 categories, most active users |
-| **User Management** | View all users, suspend/ban/reactivate, search, sort |
-| **Listing Management** | View all listings, remove listings |
+| **User Management** | View all users, suspend/ban/reactivate with reason, search, sort |
+| **Listing Management** | View all listings, remove listings with reason |
 | **Report Management** | View reports, resolve/dismiss with notes |
 | **Moderation Audit Log** | Every admin action creates a `ModerationAction` record |
 
@@ -174,6 +192,14 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 | `/reports` | Community guidelines and prohibited items |
 | `/privacy` | Privacy policy |
 
+### 5.11 Performance & Caching
+| Feature | Description |
+|---------|-------------|
+| **API Response Cache** | In-memory GET cache with 60s TTL in `apiService.js` |
+| **Cache Invalidation** | Automatic invalidation on all mutating endpoints |
+| **Parallel Data Loading** | Feed page loads independent data streams concurrently |
+| **Vite Dev Optimization** | `fs.strict: false` and optimized dependency inclusion |
+
 ---
 
 ## 6. Database Schema
@@ -187,11 +213,11 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 | **Category** | Hierarchical categories (parent/children); slug + label |
 | **PickupSpot** | Campus-specific safe meetup locations |
 | **Listing** | Core marketplace entity; type (item/wanted), title, description, price, currency, condition, category, pickup location, seller, campus, status, view count |
-| **ListingImage** | Multiple images per listing |
+| **ListingImage** | Multiple images per listing with sort order |
 | **Conversation** | Chat thread between buyer and seller for a listing |
 | **Message** | Chat messages; types: text, image, location, offer, system |
-| **Offer** | Price negotiation; amount, currency, status, parent offer for counter chains |
-| **ConversationRead** | Read receipt tracking |
+| **Offer** | Price negotiation; amount, currency, status, parent offer for counter chains, expiry |
+| **ConversationRead** | Read receipt tracking per user per conversation |
 | **Notification** | User notifications with payload JSON |
 | **Bookmark** | Junction table for saved listings |
 | **WishlistItem** | Saved search keywords |
@@ -220,13 +246,14 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 | Feature | Implementation |
 |---------|---------------|
 | **Helmet** | Security headers |
-| **CORS** | Origin whitelist |
+| **CORS** | Origin whitelist with dynamic `F_URL` parsing |
 | **Rate Limiting** | 300/15min general, 50/15min auth |
 | **Content Moderation** | Profanity blocklist + contact info detection |
 | **HTTP-only Cookies** | Refresh tokens |
 | **Token Versioning** | Global refresh revocation on logout |
 | **Password Hashing** | bcrypt (12 rounds) |
 | **Zod Validation** | All write endpoints |
+| **Trust Proxy** | Accurate IP tracking behind Render reverse proxy |
 
 ---
 
@@ -239,19 +266,30 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 | **Integration** | `auth.test.ts` — signup, login, verify, refresh |
 | **Integration** | `listings.test.ts` — CRUD, bookmarks, similar listings |
 | **Integration** | `conversations.test.ts` — create conversation, send message, get history |
+| **API Route** | Vitest-based route tests |
 
-**Total: 28 passing tests**
+**Total: 28+ passing tests**
 
 ---
 
 ## 10. Deployment
 
-| Environment | Service | URL |
-|-------------|---------|-----|
-| **Frontend** | Vercel | `https://campuskart.vercel.app` |
-| **Backend** | Render | `https://campuskart-g07o.onrender.com` |
+| Environment | Service | URL / Config |
+|-------------|---------|--------------|
+| **Frontend (dev)** | Vite Dev Server | `http://localhost:5173` |
+| **Backend (dev)** | Express + TS | `http://localhost:5000` |
+| **Frontend (prod)** | Vercel | `https://campuskart.vercel.app` |
+| **Backend (prod)** | Render | `https://campuskart-g07o.onrender.com` |
 | **Database** | Neon PostgreSQL | `ep-old-truth-azlq8zp6-pooler.c-3.ap-southeast-1.aws.neon.tech` |
 | **Container** | Docker + nginx | `docker-compose.yml` + `nginx.conf` |
+
+### Dev Scripts
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` (root) | Start backend with tsx watch |
+| `cd campuskart && npm run dev` | Start Vite frontend dev server |
+| `cd campuskart_backend && npm run dev` | Start backend directly |
+| `npm run test` | Run vitest tests |
 
 ---
 
@@ -270,6 +308,7 @@ CampusKart is a campus-only peer-to-peer marketplace designed for college studen
 2. **Frontend mock seed:** `mockSeed.js` exists alongside real API; may mask API failures if not managed
 3. **Vercel rewrites:** Frontend relies on Vercel `rewrites` to proxy `/api/*` to Render backend
 4. **FCM not configured:** Push notification service is implemented but `FCM_SERVER_KEY` is empty
+5. **In-memory cache:** API response cache is per-instance and not shared across server processes
 
 ---
 
@@ -335,4 +374,4 @@ WishlistPage
 
 ---
 
-*Document generated from codebase analysis. Last updated: 2026-09-02*
+*Document generated from codebase analysis. Last updated: 2026-09-22*
