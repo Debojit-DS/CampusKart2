@@ -327,9 +327,16 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
         listing: activeListing,
         onSubmit: async (amount) => {
           try {
-            const sent = await apiService.makeOffer(activeConv.id, amount);
+            const result = await apiService.makeOffer(activeConv.id, amount);
+            const offer = result.offer || result;
             toast.success(`Offer of ₹${amount} sent!`);
-            appendMessageToTimeline({ ...sent, type: 'offer', senderId: currentUser.id, offerId: sent.id });
+            appendMessageToTimeline({
+              ...result.message,
+              senderId: currentUser.id,
+              offerId: offer.id,
+              offer,
+              type: 'offer',
+            });
           } catch (err) {
             console.error('Make offer error:', err);
             toast.error(`Failed to send offer: ${err.message || 'Unknown error'}`);
