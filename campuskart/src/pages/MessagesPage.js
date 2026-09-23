@@ -328,15 +328,17 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
         listing: activeListing,
         onSubmit: async (amount) => {
           try {
-            const result = await apiService.makeOffer(activeConv.id, amount);
-            const offer = result.offer || result;
+            const offer = await apiService.makeOffer(activeConv.id, amount);
             toast.success(`Offer of ₹${amount} sent!`);
             appendMessageToTimeline({
-              ...result.message,
+              id: `local-offer-${offer.id}`,
+              conversationId: activeConv.id,
               senderId: currentUser.id,
+              type: 'offer',
               offerId: offer.id,
               offer,
-              type: 'offer',
+              text: `Made an offer: ₹${amount}`,
+              createdAt: new Date().toISOString(),
             });
           } catch (err) {
             console.error('Make offer error:', err);
