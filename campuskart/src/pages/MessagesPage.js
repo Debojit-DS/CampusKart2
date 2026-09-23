@@ -237,25 +237,35 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
 
   // Global Offer action callback handler for inline offer cards
   window.handleOfferAction = async (offerId, action) => {
-    if (action === 'accepted') {
-      await apiService.respondToOffer(offerId, 'accepted');
-      toast.success('Offer accepted! You can now arrange safe campus handoff.');
-      router.handleRouteChange();
-    } else if (action === 'rejected') {
-      await apiService.respondToOffer(offerId, 'rejected');
-      toast.info('Offer declined.');
-      router.handleRouteChange();
-    } else if (action === 'counter') {
-      openOfferModal({
-        listing: activeListing,
-        initialAmount: activeListing ? activeListing.price : 0,
-        isCounter: true,
-        onSubmit: async (counterAmount) => {
-          await apiService.respondToOffer(offerId, 'counter', counterAmount);
-          toast.success(`Counter offer of ₹${counterAmount} sent!`);
-          router.handleRouteChange();
-        }
-      });
+    try {
+      if (action === 'accepted') {
+        await apiService.respondToOffer(offerId, 'accepted');
+        toast.success('Offer accepted! You can now arrange safe campus handoff.');
+        router.handleRouteChange();
+      } else if (action === 'rejected') {
+        await apiService.respondToOffer(offerId, 'rejected');
+        toast.info('Offer declined.');
+        router.handleRouteChange();
+      } else if (action === 'counter') {
+        openOfferModal({
+          listing: activeListing,
+          initialAmount: activeListing ? activeListing.price : 0,
+          isCounter: true,
+          onSubmit: async (counterAmount) => {
+            try {
+              await apiService.respondToOffer(offerId, 'counter', counterAmount);
+              toast.success(`Counter offer of ₹${counterAmount} sent!`);
+              router.handleRouteChange();
+            } catch (err) {
+              console.error('Counter offer error:', err);
+              toast.error(`Failed to send counter offer: ${err.message || 'Unknown error'}`);
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Offer action error:', err);
+      toast.error(`Failed to process offer: ${err.message || 'Unknown error'}`);
     }
   };
 
