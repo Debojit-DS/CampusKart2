@@ -44,8 +44,22 @@ export async function renderListingDetailPage({ params = {}, router } = {}) {
 
   const currentUser = store.getCurrentUser() || {};
   const isOwner = listing.sellerId === currentUser.id || listing.seller?.id === currentUser.id;
-  const seller = listing.seller || await apiService.getUserById(listing.sellerId) || { fullName: 'Student', department: 'Engineering', yearOfStudy: 3 };
-  const similarListings = await apiService.getSimilarListings(listing.id);
+
+  let seller = listing.seller || null;
+  let similarListings = [];
+  try {
+    const [sellerResult, similar] = await Promise.all([
+      seller ? Promise.resolve(seller) : apiService.getUserById(listing.sellerId),
+      apiService.getSimilarListings(listing.id)
+    ]);
+    seller = sellerResult || { fullName: 'Student', department: 'Engineering', yearOfStudy: 3 };
+    similarListings = similar || [];
+  } catch (e) {
+    console.error('Error loading listing details:', e);
+    seller = { fullName: 'Student', department: 'Engineering', yearOfStudy: 3 };
+    similarListings = [];
+  }
+
   let isBookmarked = listing.isBookmarked || false;
 
   const categorySlug = typeof listing.categoryTop === 'object' ? listing.categoryTop?.slug : listing.categoryTop;

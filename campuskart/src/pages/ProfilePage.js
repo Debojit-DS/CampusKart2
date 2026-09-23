@@ -28,14 +28,17 @@ export async function renderProfilePage({ params = {}, router } = {}) {
   `;
 
   try {
-    const user = await apiService.getUserById(targetUserId) || currentUser;
-    const listingsResult = await apiService.getListings({ sellerId: targetUserId });
+    const [user, listingsResult] = await Promise.all([
+      apiService.getUserById(targetUserId),
+      apiService.getListings({ sellerId: targetUserId })
+    ]);
+    const resolvedUser = user || currentUser;
     if (!listingsResult) return container;
     const allListings = listingsResult.data || listingsResult;
     const activeListings = allListings.filter(l => l.status === 'active');
     const soldListings = allListings.filter(l => l.status === 'sold');
 
-    await renderProfileContent(container, user, activeListings, soldListings, isOwnProfile, router);
+    await renderProfileContent(container, resolvedUser, activeListings, soldListings, isOwnProfile, router);
   } catch (e) {
     console.error('Error loading profile:', e);
     const errorMsg = ErrorHandler.getErrorMessage(e);

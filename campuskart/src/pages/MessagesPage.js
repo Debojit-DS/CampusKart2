@@ -57,34 +57,35 @@ export async function renderMessagesPage({ params = {}, router } = {}) {
   `;
 
   let conversations = [];
-  try {
-    conversations = await apiService.getConversations() || [];
-  } catch (e) {
-    console.error('Error loading conversations:', e);
-  }
-  if (!conversations) return container;
-
-  // Determine active conversation details
   let activeConv = null;
   let activeListing = null;
   let counterpartUser = null;
   let messages = [];
 
-  if (activeConvId) {
-    try {
-      const convData = await apiService.getConversationById(activeConvId);
-      activeConv = convData.conversation;
-      messages = convData.messages || [];
-      // Derive listing and counterpart from conversation
+  try {
+    const [conversationsResult, convDataResult] = await Promise.all([
+      apiService.getConversations(),
+      activeConvId ? apiService.getConversationById(activeConvId).catch(e => {
+        console.error('Error loading conversation:', e);
+        return null;
+      }) : Promise.resolve(null)
+    ]);
+
+    conversations = conversationsResult || [];
+    
+    if (convDataResult) {
+      activeConv = convDataResult.conversation;
+      messages = convDataResult.messages || [];
       const conv = activeConv;
       activeListing = conv.listing || null;
-      const counterpartId = conv.buyerId === currentUser.id ? conv.sellerId : conv.buyerId;
-      counterpartId && (counterpartUser = counterpartId === conv.buyerId ? conv.buyer : conv.seller);
-      if (!counterpartUser) counterpartUser = conv.buyer || conv.seller || { fullName: 'Student' };
-    } catch (e) {
-      console.error('Error loading conversation:', e);
+      const counterpartId = currentUser.id === conv.buyerId ? conv.sellerId : conv.buyerId;
+      counterpartUser = counterpartId ? (counterpartId === conv.buyerId ? conv.buyer : conv.seller) : (conv.buyer || conv.seller || { fullName: 'Student' });
     }
+  } catch (e) {
+    console.error('Error loading messages page:', e);
   }
+
+  if (!conversations) return container;
 
   const unreadCount = conversations.reduce((sum, c) => sum + (c.unreadCountForCurrentUser || 0), 0);
   const isSellerInActiveConv = activeListing && activeConv ? activeConv.sellerId === currentUser.id : false;

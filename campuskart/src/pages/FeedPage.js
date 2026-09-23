@@ -32,20 +32,17 @@ export async function renderFeedPage({ params = {}, queryParams = {}, router } =
     sort: queryParams.sort || 'newest'
   };
 
-  const categories = await apiService.getCategories();
-
   // Initial skeleton rendering while data loads
   container.innerHTML = `
     ${renderTopNavBar({ activeCategory, activeRoute: '/feed' })}
     ${renderFilterChipBar({
-      categories,
+      categories: [],
       activeCategory,
       activeCondition: currentFilters.condition,
       hasActiveFilters: Boolean(currentFilters.condition || currentFilters.minPrice || currentFilters.maxPrice)
     })}
 
     <main class="container-custom" style="flex: 1; padding-top: 24px; padding-bottom: 60px;">
-      <!-- Search/Category Heading (if filtered or searching) -->
       ${searchQuery ? `
         <div style="margin-bottom: 24px; display: flex; align-items: baseline; justify-content: space-between;">
           <div>
@@ -65,7 +62,6 @@ export async function renderFeedPage({ params = {}, queryParams = {}, router } =
         </div>
       ` : ''}
 
-      <!-- Corkboard Masonry Grid -->
       <div id="corkboard-feed-grid" class="corkboard-masonry">
         ${[1, 2, 3, 4, 5, 6].map(() => `
           <div class="corkboard-masonry-item" style="background: var(--surface-bright); border: 1px solid var(--surface-container); border-radius: var(--radius-default); padding: 12px; height: 280px;">
@@ -101,12 +97,25 @@ export async function renderFeedPage({ params = {}, queryParams = {}, router } =
     });
   });
 
-  // Fetch real listings
+  // Fetch real listings and categories in parallel
   try {
-    const result = await apiService.getListings(currentFilters);
-    if (!result) return container;
-    const listings = result.data || result;
+    const [categories, result] = await Promise.all([
+      apiService.getCategories(),
+      apiService.getListings(currentFilters)
+    ]);
+    
+    const listings = result?.data || result || [];
     const grid = container.querySelector('#corkboard-feed-grid');
+    const chipBar = container.querySelector('#filter-chip-bar');
+
+    if (chipBar && categories?.length) {
+      chipBar.outerHTML = renderFilterChipBar({
+        categories,
+        activeCategory,
+        activeCondition: currentFilters.condition,
+        hasActiveFilters: Boolean(currentFilters.condition || currentFilters.minPrice || currentFilters.maxPrice)
+      });
+    }
 
     if (listings.length === 0) {
       grid.className = '';

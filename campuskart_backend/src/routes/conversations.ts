@@ -26,17 +26,20 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       },
     });
 
+    const conversationIds = conversations.map(c => c.id);
+    const reads = await prisma.conversationRead.findMany({
+      where: { conversationId: { in: conversationIds }, userId },
+    });
+    const readMap = new Map(reads.map(r => [r.conversationId, r.lastReadAt]));
+
     const result = await Promise.all(
       conversations.map(async (conv) => {
-        const read = await prisma.conversationRead.findUnique({
-          where: { conversationId_userId: { conversationId: conv.id, userId } },
-        });
-
+        const lastReadAt = readMap.get(conv.id);
         const unreadCount = await prisma.message.count({
           where: {
             conversationId: conv.id,
             senderId: { not: userId },
-            createdAt: read ? { gt: read.lastReadAt } : undefined,
+            ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
           },
         });
 
